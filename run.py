@@ -8,7 +8,6 @@ def main():
     app.setApplicationName("Dijkstra")
 
     window = MainWindow()
-    window.resize(1200, 800)
     window.show()
 
     sys.exit(app.exec_())

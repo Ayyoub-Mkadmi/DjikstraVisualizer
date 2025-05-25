@@ -3,11 +3,12 @@ import math
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
     QCheckBox, QLabel, QMessageBox,
-    QGroupBox, QFrame , QInputDialog, QDialog,QPlainTextEdit,QApplication
+    QGroupBox, QFrame , QInputDialog, QDialog,QPlainTextEdit,QApplication,QLineEdit
 )
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 
+from src.gui2.djikstra_app import DijkstraApp
 from src.gui.graph_selection_dialog import GraphSelectionDialog
 from src.gui.help_dialog import HelpDialog
 from .graph_canvas import GraphCanvas
@@ -17,8 +18,9 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Visualiseur de Dijkstra")
-        self.setGeometry(100, 100, 1200, 800)
-        
+        screen = QApplication.primaryScreen()
+        geometry = screen.availableGeometry()
+        self.setGeometry(geometry)        
         # Apply modern styling
         self.setStyleSheet("""
             QWidget {
@@ -149,6 +151,15 @@ class MainWindow(QWidget):
         side_panel.addStretch()
         layout.addLayout(side_panel, stretch=1)
 
+        # Start Button
+        export_btn = QPushButton("Demarrer Djikstra")
+        export_btn.clicked.connect(self.start_dijkstra)
+        export_btn.setStyleSheet("margin-top: 15px;")
+        side_panel.addWidget(export_btn)
+
+        side_panel.addStretch()
+        layout.addLayout(side_panel, stretch=1)
+
         # Add a vertical separator line
         separator = QFrame()
         separator.setFrameShape(QFrame.VLine)
@@ -213,6 +224,66 @@ class MainWindow(QWidget):
         layout.addLayout(button_box)
 
         dialog.exec_()
+
+
+    def start_dijkstra(self):
+        """Extract the graph and start Dijkstra's algorithm from a chosen source."""
+        edges = self.canvas.export_graph()
+        formatted_text = str(edges)
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Démarrer l'algorithme de Dijkstra")
+        dialog.setMinimumWidth(500)
+
+        layout = QVBoxLayout(dialog)
+
+        title = QLabel("Structure actuelle du graphe :")
+        title.setStyleSheet("font-weight: bold; font-size: 14px;")
+        layout.addWidget(title)
+
+        text_edit = QPlainTextEdit()
+        text_edit.setPlainText(formatted_text)
+        text_edit.setReadOnly(True)
+        text_edit.setFont(QFont("Courier New", 10))
+        text_edit.setStyleSheet("background-color: #f8f8f8; padding: 10px; border: 1px solid #ccc;")
+        layout.addWidget(text_edit)
+
+        source_label = QLabel("Sommet source :")
+        layout.addWidget(source_label)
+
+        source_input = QLineEdit()
+        source_input.setPlaceholderText("Entrez l'identifiant du sommet source (ex : 0)")
+        layout.addWidget(source_input)
+
+        button_box = QHBoxLayout()
+
+        start_button = QPushButton("🚀 Lancer Dijkstra")
+        start_button.setStyleSheet("padding: 6px 12px; font-weight: bold;")
+        def on_start():
+            try:
+                source = int(source_input.text())
+                app = DijkstraApp(edges, source)
+                app.run()
+                dialog.close()
+            except ValueError:
+                QMessageBox.warning(dialog, "Erreur", "Veuillez entrer un entier valide pour le sommet source.")
+            except Exception as e:
+                QMessageBox.critical(dialog, "Erreur", str(e))
+
+        start_button.clicked.connect(on_start)
+
+        close_button = QPushButton("❌ Fermer")
+        close_button.setStyleSheet("padding: 6px 12px;")
+        close_button.clicked.connect(dialog.close)
+
+        button_box.addWidget(start_button)
+        button_box.addStretch()
+        button_box.addWidget(close_button)
+
+        layout.addLayout(button_box)
+
+        dialog.exec_()
+
         
         
         
