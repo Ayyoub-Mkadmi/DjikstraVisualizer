@@ -1,0 +1,13 @@
+dijkstra_visualizer/
+├── main.py                # GUI entry point (Ayyoub)
+├── visualizer.py          # Dijkstra visualization logic (Ayyoub)
+├── dijkstra_engine.py     # Algorithm backend (Yassine)
+├── graph_loader.py        # Load/save JSON graphs (Yassine)
+├── logger.py              # Logs and status updates (Yassine)
+├── graphs/
+│   ├── case1.json
+│   ├── ...
+├── assets/                # Optional icons, styling
+├── README.md
+├── report.pdf
+└── requirements.txt
