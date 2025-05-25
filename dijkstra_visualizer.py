@@ -27,23 +27,25 @@ class DijkstraVisualisateur:
         hauteur_ecran = self.racine.winfo_screenheight()
         self.racine.geometry(f"{int(largeur_ecran*0.9)}x{int(hauteur_ecran*0.9)}")
         
-        # Schéma de couleurs moderne
-        self.couleur_fond = '#f5f7fa'
+        # Schéma de couleurs moderne (aligned with PyQt5 version)
+        self.couleur_fond = '#f5f5f5'
         self.couleur_panneau = '#ffffff'
-        self.couleur_principale = '#4e79a7'
-        self.couleur_secondaire = '#f28e2b'
+        self.couleur_principale = '#4285f4'
+        self.couleur_secondaire = '#f1c40f'
         self.couleur_surlignage = '#e15759'
-        self.couleur_texte = '#2d3436'
+        self.couleur_texte = '#202124'
         self.couleur_succes = '#59a14f'
         self.couleur_arete = '#6a8caf'
         
         # Schéma de couleurs pour le graphe
-        self.couleur_noeud = '#4e79a7'
+        self.couleur_noeud = '#4285f4'
         self.couleur_noeud_courant = '#e15759'
         self.couleur_noeud_visite = '#59a14f'
         self.couleur_noeud_non_visite = '#bab0ab'
-        self.couleur_arete_surlignee = '#f28e2b'
+        self.couleur_arete_surlignee = '#f1c40f'
         
+        self._layout_seed = 42  # Ajout d'une seed fixe pour la topologie initiale
+        self.positions = None   # Stocke la disposition courante
         self.configurer_interface()
         self.configurer_algorithme()
         
@@ -52,28 +54,71 @@ class DijkstraVisualisateur:
         self.style = ttk.Style()
         self.style.theme_use('clam')
         
+        # Configure custom styles to match PyQt5 version
+        self.style.configure('TFrame', background=self.couleur_fond)
+        self.style.configure('Panel.TLabelframe', 
+                           background=self.couleur_panneau,
+                           borderwidth=2,
+                           relief=tk.RAISED,
+                           bordercolor='#e0e0e0')
+        self.style.configure('Panel.TLabelframe.Label', 
+                           background=self.couleur_panneau,
+                           foreground=self.couleur_texte,
+                           font=('Segoe UI', 10, 'bold'))
+        self.style.configure('Primary.TButton', 
+                           font=('Segoe UI', 10, 'bold'),
+                           padding=8,
+                           foreground='white',
+                           background=self.couleur_principale,
+                           borderwidth=0,
+                           focusthickness=0,
+                           focuscolor='none')
+        self.style.map('Primary.TButton',
+                      background=[('active', '#3367d6'), ('pressed', '#2a56c6')])
+        
         # Cadre principal
         cadre_principal = tk.Frame(self.racine, bg=self.couleur_fond)
-        cadre_principal.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        cadre_principal.pack(fill=tk.BOTH, expand=True, padx=12, pady=12)
         
         # Panneau gauche (contrôles et statut)
-        panneau_gauche = tk.Frame(cadre_principal, bg=self.couleur_panneau, bd=2, relief=tk.RAISED)
-        panneau_gauche.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 10), pady=5)
+        panneau_gauche = ttk.LabelFrame(cadre_principal, style='Panel.TLabelframe', width=300)
+        panneau_gauche.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 15), pady=5)
+        panneau_gauche.pack_propagate(False)
         
         # Panneau droit (visualisation)
         panneau_droit = tk.Frame(cadre_principal, bg=self.couleur_fond)
-        panneau_droit.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(10, 0), pady=5)
+        panneau_droit.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(15, 0), pady=5)
         
         # Titre
         cadre_titre = tk.Frame(panneau_gauche, bg=self.couleur_panneau)
         cadre_titre.pack(fill=tk.X, pady=(10, 20))
         ttk.Label(
             cadre_titre, 
-            text="Algorithme de Dijkstra", 
-            font=('Helvetica', 14, 'bold'),
+            text="Visualiseur de Dijkstra", 
+            font=('Segoe UI', 18, 'bold'),
             background=self.couleur_panneau,
-            foreground=self.couleur_principale
-        ).pack()
+            foreground=self.couleur_texte
+        ).pack(side=tk.LEFT)
+        
+        # Help button
+        help_btn = ttk.Button(
+            cadre_titre,
+            text="?",
+            style='Primary.TButton',
+            width=2,
+            command=self.show_help
+        )
+        help_btn.pack(side=tk.RIGHT)
+        help_btn.configure(style='Help.TButton')
+        self.style.configure('Help.TButton', 
+                           background='#f1c40f',
+                           foreground='#2c3e50',
+                           font=('Segoe UI', 10, 'bold'),
+                           padding=0,
+                           width=24,
+                           height=24)
+        self.style.map('Help.TButton',
+                      background=[('active', '#f39c12'), ('pressed', '#e67e22')])
         
         # Widgets de contrôle
         cadre_controle = ttk.LabelFrame(
@@ -90,7 +135,8 @@ class DijkstraVisualisateur:
         ttk.Label(
             cadre_vitesse,
             text="Vitesse (ms):",
-            background=self.couleur_panneau
+            background=self.couleur_panneau,
+            font=('Segoe UI', 9)
         ).pack(side=tk.LEFT)
         
         self.variable_vitesse = tk.IntVar(value=500)
@@ -107,18 +153,12 @@ class DijkstraVisualisateur:
             cadre_vitesse,
             textvariable=self.variable_vitesse,
             width=4,
-            background=self.couleur_panneau
+            background=self.couleur_panneau,
+            font=('Segoe UI', 9)
         )
         self.etiquette_vitesse.pack(side=tk.LEFT)
         
         # Boutons
-        style_bouton = ttk.Style()
-        style_bouton.configure('Primary.TButton', 
-                             font=('Helvetica', 10, 'bold'),
-                             padding=8,
-                             foreground='white',
-                             background=self.couleur_principale)
-        
         self.bouton_etape = ttk.Button(
             cadre_controle, 
             text="▶ Étape suivante", 
@@ -142,7 +182,16 @@ class DijkstraVisualisateur:
             style='Primary.TButton'
         )
         self.bouton_reinitialiser.pack(fill=tk.X, pady=5)
-        
+
+        # Nouveau bouton pour redessiner la topologie
+        self.bouton_redessiner = ttk.Button(
+            cadre_controle,
+            text="🔄 Nouvelle topologie",
+            command=self.redessiner_topologie,
+            style='Primary.TButton'
+        )
+        self.bouton_redessiner.pack(fill=tk.X, pady=5)
+
         # Visualisation du statut de l'algorithme
         cadre_statut = ttk.LabelFrame(
             panneau_gauche, 
@@ -158,14 +207,14 @@ class DijkstraVisualisateur:
         ttk.Label(
             self.cadre_noeud_courant,
             text="Nœud courant:",
-            font=('Helvetica', 9, 'bold'),
+            font=('Segoe UI', 9, 'bold'),
             background=self.couleur_panneau
         ).pack(side=tk.LEFT, padx=(0, 5))
         
         self.affichage_noeud_courant = tk.Label(
             self.cadre_noeud_courant,
             text="Aucun",
-            font=('Helvetica', 9, 'bold'),
+            font=('Segoe UI', 9, 'bold'),
             bg=self.couleur_panneau,
             fg=self.couleur_surlignage,
             width=5,
@@ -181,7 +230,7 @@ class DijkstraVisualisateur:
         ttk.Label(
             cadre_visites,
             text="Nœuds visités:",
-            font=('Helvetica', 9, 'bold'),
+            font=('Segoe UI', 9, 'bold'),
             background=self.couleur_panneau
         ).pack(anchor=tk.W)
         
@@ -205,7 +254,7 @@ class DijkstraVisualisateur:
         ttk.Label(
             cadre_file,
             text="File de priorité:",
-            font=('Helvetica', 9, 'bold'),
+            font=('Segoe UI', 9, 'bold'),
             background=self.couleur_panneau
         ).pack(anchor=tk.W)
         
@@ -228,15 +277,22 @@ class DijkstraVisualisateur:
         self.canvas = FigureCanvasTkAgg(self.figure, master=panneau_droit)
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
         
-        # Configurer les styles
-        self.style.configure('Panel.TLabelframe', 
-                           background=self.couleur_panneau,
-                           borderwidth=2,
-                           relief=tk.RAISED)
-        self.style.configure('Panel.TLabelframe.Label', 
-                           background=self.couleur_panneau,
-                           foreground=self.couleur_texte,
-                           font=('Helvetica', 10, 'bold'))
+    def show_help(self):
+        help_text = """Visualiseur de Dijkstra
+
+Cet outil permet de visualiser étape par étape l'exécution de l'algorithme de Dijkstra pour trouver les plus courts chemins dans un graphe.
+
+Fonctionnalités:
+- Étape suivante: Avancer d'une étape dans l'algorithme
+- Défilement auto: Exécuter automatiquement l'algorithme
+- Réinitialiser: Recommencer l'algorithme depuis le début
+- Nouvelle topologie: Redessiner le graphe avec une nouvelle disposition
+
+Le graphe montre:
+- Nœuds visités en vert
+- Nœud courant en rouge
+- Arêtes de l'arbre couvrant minimal en vert foncé"""
+        messagebox.showinfo("Aide", help_text)
         
     def mettre_a_jour_etiquette_vitesse(self):
         self.etiquette_vitesse.config(text=str(self.variable_vitesse.get()))
@@ -330,18 +386,17 @@ class DijkstraVisualisateur:
             self.affichage_file.insert(tk.END, "Vide")
         self.affichage_file.config(state=tk.DISABLED)
         
-    def dessiner_graphe(self):
+    def dessiner_graphe(self, force_new_layout=False):
+        import math
         self.axes.clear()
-        
-        # Utiliser une disposition qui évite le chevauchement des nœuds
-        positions = nx.kamada_kawai_layout(self.graphe_initial)
-        
-        # Ajuster l'échelle pour une meilleure visibilité
-        facteur_echelle = 1.8
-        positions = {k: (v[0]*facteur_echelle, v[1]*facteur_echelle) for k, v in positions.items()}
-        
+
+        # Calculer ou réutiliser la disposition des nœuds
+        if force_new_layout or self.positions is None:
+            self.positions = self.calculate_optimal_layout(force_new_seed=force_new_layout)
+        positions = self.positions
+
         etat = self.algorithme.get_current_state()
-        
+
         # Style des nœuds
         couleurs_noeuds = []
         tailles_noeuds = []
@@ -355,18 +410,10 @@ class DijkstraVisualisateur:
             else:
                 couleurs_noeuds.append(self.couleur_noeud_non_visite)
                 tailles_noeuds.append(600)
-        
-        # Dessiner toutes les arêtes d'abord (derrière les nœuds)
-        nx.draw_networkx_edges(
-            self.graphe_initial, positions, ax=self.axes,
-            edge_color=self.couleur_arete,
-            width=1.5,
-            arrows=True,
-            arrowsize=15,
-            alpha=0.5,
-            connectionstyle='arc3,rad=0'  # Lignes droites
-        )
-        
+
+        # Dessiner les arêtes avec évitement de chevauchement
+        self.draw_edges_with_avoidance(positions, etat)
+
         # Dessiner les nœuds
         nx.draw_networkx_nodes(
             self.graphe_initial, positions, ax=self.axes,
@@ -376,87 +423,201 @@ class DijkstraVisualisateur:
             linewidths=1.5,
             alpha=0.9
         )
-        
-        # Mettre en évidence les arêtes considérées à l'étape courante
-        if etat['current_node'] is not None:
-            aretes_courantes = [(etat['current_node'], v) for v, _ in self.algorithme.graph[etat['current_node']]]
+
+        # Dessiner les étiquettes des arêtes avec placement amélioré
+        self.draw_edge_labels(positions)
+
+        # Dessiner les étiquettes des nœuds avec distances
+        self.draw_node_labels(positions, etat)
+
+        # Afficher les informations sur le chemin le plus court
+        if etat['current_node'] is not None and etat['current_node'] != self.source_initial:
+            self.display_path_info(etat)
+
+        # Personnaliser l'apparence du graphe
+        self.axes.set_facecolor(self.couleur_fond)
+        self.axes.set_title("Visualisation de l'Algorithme de Dijkstra", fontsize=12, pad=20)
+        self.axes.axis('off')
+        self.figure.tight_layout()
+        self.canvas.draw()
+
+    def redessiner_topologie(self):
+        """Force le recalcul et le redessin du graphe avec une nouvelle disposition."""
+        import random
+        self._layout_seed = random.randint(0, 1000000)
+        self.positions = self.calculate_optimal_layout(force_new_seed=True)
+        self.dessiner_graphe()
+
+    def calculate_optimal_layout(self, force_new_seed=False):
+        """
+        Calcule une disposition optimale des nœuds pour une meilleure répartition,
+        en testant plusieurs seeds et en choisissant celle qui maximise la distance minimale entre nœuds.
+        """
+        import math
+        import random
+        n = self.graphe_initial.number_of_nodes()
+        nodes = list(self.graphe_initial.nodes())
+
+        # Pour les petits graphes, on investit dans la recherche du meilleur layout
+        if n <= 40:
+            best_pos = None
+            best_min_dist = -1
+            num_trials = 20 if n < 20 else 10  # Plus de tentatives pour les petits graphes
+            for _ in range(num_trials):
+                seed = random.randint(0, 1000000) if force_new_seed else self._layout_seed + _
+                pos = nx.spring_layout(
+                    self.graphe_initial,
+                    k=3.0 / math.sqrt(n),
+                    iterations=200,
+                    scale=2.0,
+                    seed=seed
+                )
+                # Calcul de la distance minimale entre tous les couples de nœuds
+                min_dist = float('inf')
+                positions = list(pos.values())
+                for i in range(n):
+                    for j in range(i+1, n):
+                        dx = positions[i][0] - positions[j][0]
+                        dy = positions[i][1] - positions[j][1]
+                        dist = math.hypot(dx, dy)
+                        if dist < min_dist:
+                            min_dist = dist
+                if min_dist > best_min_dist:
+                    best_min_dist = min_dist
+                    best_pos = pos
+            self.normalize_positions(best_pos)
+            return best_pos
+
+        # Pour les graphes plus grands, utiliser spring_layout normalisé
+        try:
+            seed = self._layout_seed
+            if force_new_seed:
+                seed = random.randint(0, 1000000)
+                self._layout_seed = seed
+            pos = nx.spring_layout(
+                self.graphe_initial,
+                k=3.0 / math.sqrt(n),
+                iterations=100,
+                scale=2.0,
+                seed=seed
+            )
+            self.normalize_positions(pos)
+            return pos
+        except Exception:
+            return nx.circular_layout(self.graphe_initial, scale=2.0)
+
+    def normalize_positions(self, pos):
+        if not pos:
+            return
+        x_values = [p[0] for p in pos.values()]
+        y_values = [p[1] for p in pos.values()]
+        min_x, max_x = min(x_values), max(x_values)
+        min_y, max_y = min(y_values), max(y_values)
+        x_range = max_x - min_x if max_x != min_x else 1
+        y_range = max_y - min_y if max_y != min_y else 1
+        padding = 0.1
+        scale = 1 - padding
+        for node in pos:
+            pos[node] = (
+                scale * 2 * (pos[node][0] - min_x) / x_range - scale + padding/2,
+                scale * 2 * (pos[node][1] - min_y) / y_range - scale + padding/2
+            )
+
+    def draw_edges_with_avoidance(self, pos, state):
+        nx.draw_networkx_edges(
+            self.graphe_initial, pos, ax=self.axes,
+            edge_color=self.couleur_arete,
+            width=1.5,
+            arrows=True,
+            arrowsize=15,
+            alpha=0.5,
+            connectionstyle='arc3,rad=0'  # <-- lignes droites
+        )
+        if state['current_node'] is not None:
+            current_edges = [(state['current_node'], v) for v, _ in self.algorithme.graph[state['current_node']]]
             nx.draw_networkx_edges(
-                self.graphe_initial, positions, ax=self.axes,
-                edgelist=aretes_courantes,
+                self.graphe_initial, pos, ax=self.axes,
+                edgelist=current_edges,
                 edge_color=self.couleur_arete_surlignee,
                 width=3.0,
                 arrows=True,
                 arrowsize=20,
                 alpha=0.8,
-                connectionstyle='arc3,rad=0'  # Lignes droites
+                connectionstyle='arc3,rad=0'  # <-- lignes droites
             )
-        
-        # Dessiner l'arbre couvrant minimal (persistant)
         if self.arbre_couvrant_minimal.number_of_edges() > 0:
             nx.draw_networkx_edges(
-                self.arbre_couvrant_minimal, positions, ax=self.axes,
+                self.arbre_couvrant_minimal, pos, ax=self.axes,
                 edge_color=self.couleur_succes,
                 width=3.5,
                 arrows=True,
                 arrowsize=20,
                 alpha=0.8,
-                connectionstyle='arc3,rad=0'  # Lignes droites
+                connectionstyle='arc3,rad=0'  # <-- lignes droites
             )
-        
-        # Étiquettes des arêtes avec positionnement approprié
-        etiquettes_aretes = {(u, v): f"{d['weight']}" for u, v, d in self.graphe_initial.edges(data=True)}
-        nx.draw_networkx_edge_labels(
-            self.graphe_initial, positions, edge_labels=etiquettes_aretes,
-            ax=self.axes, font_size=9,
-            bbox=dict(alpha=0.8, facecolor='white', edgecolor='none')
-        )
-        
-        # Étiquettes des nœuds avec distances
-        etiquettes_noeuds = {}
-        for noeud in self.graphe_initial.nodes():
-            dist = etat['distances'].get(noeud, float('inf'))
-            texte_dist = f"{dist:.0f}" if dist < float('inf') else "∞"
-            etiquettes_noeuds[noeud] = f"{noeud}\n(d={texte_dist})"
-            
-        # Dessiner les étiquettes des nœuds avec contour pour une meilleure visibilité
+
+    def draw_edge_labels(self, pos):
+        """Affiche les poids directement sur les arêtes (arcs), bien centrés et superposés à l'arc"""
+        edge_labels = {(u, v): f"{d['weight']}" for u, v, d in self.graphe_initial.edges(data=True)}
+        for edge, label in edge_labels.items():
+            x1, y1 = pos[edge[0]]
+            x2, y2 = pos[edge[1]]
+            # Position du label : exactement au centre de l'arc
+            x = (x1 + x2) / 2
+            y = (y1 + y2) / 2
+            # Décalage très léger pour éviter de masquer la flèche, mais rester sur l'arc
+            dx = x2 - x1
+            dy = y2 - y1
+            length = (dx**2 + dy**2) ** 0.5
+            if length != 0:
+                # Décalage minime dans la direction perpendiculaire (pour rester sur l'arc)
+                offset_x = -dy / length * 0.02
+                offset_y = dx / length * 0.02
+                x += offset_x
+                y += offset_y
+            self.axes.text(
+                x, y, label,
+                bbox=dict(facecolor='white', alpha=0.7, edgecolor='none', boxstyle='round,pad=0.1'),
+                fontsize=10,
+                ha='center',
+                va='center',
+                zorder=10
+            )
+
+    def draw_node_labels(self, pos, state):
+        node_labels = {}
+        for node in self.graphe_initial.nodes():
+            dist = state['distances'].get(node, float('inf'))
+            text_dist = f"{dist:.0f}" if dist < float('inf') else "∞"
+            node_labels[node] = f"{node}\n(d={text_dist})"
         textes = nx.draw_networkx_labels(
-            self.graphe_initial, positions, labels=etiquettes_noeuds,
+            self.graphe_initial, pos, labels=node_labels,
             ax=self.axes, font_size=10,
             font_color=self.couleur_texte,
             font_weight='bold'
         )
-        
-        for _, texte in textes.items():
-            texte.set_path_effects([
+        for _, text in textes.items():
+            text.set_path_effects([
                 patheffects.withStroke(linewidth=3, foreground='white')
             ])
-        
-        # Afficher les informations sur le chemin le plus court
-        if etat['current_node'] is not None and etat['current_node'] != self.source_initial:
-            chemin = []
-            noeud = etat['current_node']
-            while noeud is not None:
-                chemin.append(noeud)
-                noeud = etat['predecessors'].get(noeud)
-            chemin.reverse()
-            
-            if len(chemin) > 1:
-                distance_totale = etat['distances'][etat['current_node']]
-                self.axes.text(
-                    0.5, -0.1,
-                    f"Distance jusqu'à {etat['current_node']}: {distance_totale}",
-                    transform=self.axes.transAxes,
-                    ha='center',
-                    fontsize=11,
-                    bbox=dict(facecolor=self.couleur_succes, alpha=0.7, edgecolor='none')
-                )
-        
-        # Personnaliser l'apparence du graphe
-        self.axes.set_facecolor(self.couleur_fond)
-        self.axes.set_title("Visualisation de l'Algorithme de Dijkstra", fontsize=12, pad=20)
-        self.axes.margins(0.2)
-        self.figure.tight_layout()
-        self.canvas.draw()
+
+    def display_path_info(self, state):
+        path = []
+        node = state['current_node']
+        while node is not None:
+            path.append(node)
+            node = state['predecessors'].get(node)
+        path.reverse()
+        if len(path) > 1:
+            total_distance = state['distances'][state['current_node']]
+            self.axes.text(
+                0.5, -0.1,
+                f"Distance jusqu'à {state['current_node']}: {total_distance}",
+                transform=self.axes.transAxes,
+                ha='center',
+                fontsize=11,
+                bbox=dict(facecolor=self.couleur_succes, alpha=0.7, edgecolor='none')
+            )
         
     def fermer(self):
         if self.auto_etape and self.id_auto_etape:
