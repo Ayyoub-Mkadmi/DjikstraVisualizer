@@ -132,7 +132,7 @@ class MainWindow(QWidget):
         options_layout = QVBoxLayout()
         
         self.allow_loops_cb = QCheckBox("Autoriser les boucles")
-        self.allow_duplicates_cb = QCheckBox("Autoriser les arêtes en double")
+        self.allow_duplicates_cb = QCheckBox("Autoriser les arcs en double")
         
         self.allow_loops_cb.setChecked(True)
         self.allow_duplicates_cb.setChecked(True)
