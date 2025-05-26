@@ -148,14 +148,11 @@ class MainWindow(QWidget):
         export_btn.setStyleSheet("margin-top: 15px;")
         side_panel.addWidget(export_btn)
 
-        side_panel.addStretch()
-        layout.addLayout(side_panel, stretch=1)
-
         # Start Button
-        export_btn = QPushButton("Demarrer Djikstra")
-        export_btn.clicked.connect(self.start_dijkstra)
-        export_btn.setStyleSheet("margin-top: 15px;")
-        side_panel.addWidget(export_btn)
+        start_btn = QPushButton("Demarrer Djikstra")
+        start_btn.clicked.connect(self.start_dijkstra)
+        start_btn.setStyleSheet("margin-top: 15px;")
+        side_panel.addWidget(start_btn)
 
         side_panel.addStretch()
         layout.addLayout(side_panel, stretch=1)
@@ -227,8 +224,19 @@ class MainWindow(QWidget):
 
 
     def start_dijkstra(self):
-        """Extract the graph and start Dijkstra's algorithm from a chosen source."""
+        print("start_dijkstra called")  # Debug
         edges = self.canvas.export_graph()
+        if not edges:
+            QMessageBox.warning(self, "Erreur", "Le graphe est vide.")
+            return
+
+        # Get all unique node indices from edges
+        node_set = set()
+        for u, v, _ in edges:
+            node_set.add(u)
+            node_set.add(v)
+        node_list = sorted(node_set)
+
         formatted_text = str(edges)
 
         dialog = QDialog(self)
@@ -248,12 +256,14 @@ class MainWindow(QWidget):
         text_edit.setStyleSheet("background-color: #f8f8f8; padding: 10px; border: 1px solid #ccc;")
         layout.addWidget(text_edit)
 
-        source_label = QLabel("Sommet source :")
+        source_label = QLabel("Choisissez le sommet source :")
         layout.addWidget(source_label)
 
-        source_input = QLineEdit()
-        source_input.setPlaceholderText("Entrez l'identifiant du sommet source (ex : 0)")
-        layout.addWidget(source_input)
+        from PyQt5.QtWidgets import QComboBox
+        source_combo = QComboBox()
+        for node in node_list:
+            source_combo.addItem(str(node))
+        layout.addWidget(source_combo)
 
         button_box = QHBoxLayout()
 
@@ -261,14 +271,21 @@ class MainWindow(QWidget):
         start_button.setStyleSheet("padding: 6px 12px; font-weight: bold;")
         def on_start():
             try:
-                source = int(source_input.text())
-                app = DijkstraApp(edges, source)
-                app.run()
+                source = int(source_combo.currentText())
+                print(f"Dialog result: ok=True, source={source}")  # Debug
+                self.dijkstra_app = DijkstraApp(edges, source, parent=None)
+                self.dijkstra_app.run()
+                # Bring the visualizer to the front and set always-on-top
+                if hasattr(self.dijkstra_app, "visualizer"):
+                    vis = self.dijkstra_app.visualizer
+                    vis.setWindowFlag(Qt.WindowStaysOnTopHint, True)
+                    vis.show()  # Needed to apply the flag
+                    vis.raise_()
+                    vis.activateWindow()
                 dialog.close()
-            except ValueError:
-                QMessageBox.warning(dialog, "Erreur", "Veuillez entrer un entier valide pour le sommet source.")
             except Exception as e:
-                QMessageBox.critical(dialog, "Erreur", str(e))
+                print(f"Exception: {e}")  # Debug
+                QMessageBox.critical(dialog, "Erreur", f"Une erreur est survenue:\n{str(e)}")
 
         start_button.clicked.connect(on_start)
 
@@ -283,12 +300,6 @@ class MainWindow(QWidget):
         layout.addLayout(button_box)
 
         dialog.exec_()
-
-        
-        
-        
-        
-
     def show_predefined_graphs(self):
         # Define some sample graphs
         predefined_graphs = {
