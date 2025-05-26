@@ -38,12 +38,14 @@ class DijkstraVisualisateur:
         self.couleur_arete = '#6a8caf'
         
         # Schéma de couleurs pour le graphe
-        self.couleur_noeud = '#4285f4'
+        self.couleur_noeud = "#C8DCFF"  # Light blue
         self.couleur_noeud_courant = '#e15759'
         self.couleur_noeud_visite = '#59a14f'
-        self.couleur_noeud_non_visite = '#bab0ab'
+        self.couleur_noeud_non_visite = "#89B4FF"   # Light blue
         self.couleur_arete_surlignee = '#f1c40f'
         
+        self.couleur_noeud_source = '#ff69b4'  # Pink for the source node
+
         self._layout_seed = 42  # Ajout d'une seed fixe pour la topologie initiale
         self.positions = None   # Stocke la disposition courante
         self.configurer_interface()
@@ -354,7 +356,7 @@ class DijkstraVisualisateur:
         self.affichage_file.config(state=tk.DISABLED)
         
     def dessiner_graphe(self, force_new_layout=False):
-        import math
+        
         self.axes.clear()
 
         # Calculer ou réutiliser la disposition des nœuds
@@ -368,7 +370,10 @@ class DijkstraVisualisateur:
         couleurs_noeuds = []
         tailles_noeuds = []
         for noeud in self.graphe_initial.nodes():
-            if noeud == etat['current_node']:
+            if noeud == self.source_initial:
+                couleurs_noeuds.append(self.couleur_noeud_source)
+                tailles_noeuds.append(1300)
+            elif noeud == etat['current_node']:
                 couleurs_noeuds.append(self.couleur_noeud_courant)
                 tailles_noeuds.append(1200)
             elif noeud in etat['visited']:
@@ -417,61 +422,27 @@ class DijkstraVisualisateur:
 
     def calculate_optimal_layout(self, force_new_seed=False):
         """
-        Calcule une disposition optimale des nœuds pour une meilleure répartition,
-        en testant plusieurs seeds et en choisissant celle qui maximise la distance minimale entre nœuds.
+        Place les nœuds en cercle, façon 'steering wheel', pour une répartition parfaite.
         """
         import math
-        import random
         n = self.graphe_initial.number_of_nodes()
         nodes = list(self.graphe_initial.nodes())
+        radius = 1.0  # rayon du cercle
+        angle_offset = 0  # pour faire tourner le cercle à chaque redessin si souhaité
 
-        # Pour les petits graphes, on investit dans la recherche du meilleur layout
-        if n <= 40:
-            best_pos = None
-            best_min_dist = -1
-            num_trials = 20 if n < 20 else 10  # Plus de tentatives pour les petits graphes
-            for _ in range(num_trials):
-                seed = random.randint(0, 1000000) if force_new_seed else self._layout_seed + _
-                pos = nx.spring_layout(
-                    self.graphe_initial,
-                    k=3.0 / math.sqrt(n),
-                    iterations=200,
-                    scale=2.0,
-                    seed=seed
-                )
-                # Calcul de la distance minimale entre tous les couples de nœuds
-                min_dist = float('inf')
-                positions = list(pos.values())
-                for i in range(n):
-                    for j in range(i+1, n):
-                        dx = positions[i][0] - positions[j][0]
-                        dy = positions[i][1] - positions[j][1]
-                        dist = math.hypot(dx, dy)
-                        if dist < min_dist:
-                            min_dist = dist
-                if min_dist > best_min_dist:
-                    best_min_dist = min_dist
-                    best_pos = pos
-            self.normalize_positions(best_pos)
-            return best_pos
+        # Optionnel: randomiser la rotation du cercle à chaque redessin
+        if force_new_seed:
+            import random
+            angle_offset = random.uniform(0, 2 * math.pi)
 
-        # Pour les graphes plus grands, utiliser spring_layout normalisé
-        try:
-            seed = self._layout_seed
-            if force_new_seed:
-                seed = random.randint(0, 1000000)
-                self._layout_seed = seed
-            pos = nx.spring_layout(
-                self.graphe_initial,
-                k=3.0 / math.sqrt(n),
-                iterations=100,
-                scale=2.0,
-                seed=seed
-            )
-            self.normalize_positions(pos)
-            return pos
-        except Exception:
-            return nx.circular_layout(self.graphe_initial, scale=2.0)
+        pos = {}
+        for i, node in enumerate(nodes):
+            angle = 2 * math.pi * i / n + angle_offset
+            x = radius * math.cos(angle)
+            y = radius * math.sin(angle)
+            pos[node] = (x, y)
+        self.normalize_positions(pos)
+        return pos
 
     def normalize_positions(self, pos):
         if not pos:
