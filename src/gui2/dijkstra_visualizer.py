@@ -1,9 +1,9 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, 
-    QGroupBox, QFrame, QTextEdit, QSlider, QMessageBox, QInputDialog
+    QGroupBox, QFrame, QTextEdit, QSlider, QMessageBox, QInputDialog,QProgressBar
 )
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QFont, QTextCursor
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QFont
 
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -107,6 +107,16 @@ class DijkstraVisualisateur(QWidget):
                 border-radius: 8px;
                 margin: -4px 0;
             }}
+            QProgressBar {{
+                border: 1px solid #e0e0e0;
+                border-radius: 4px;
+                background: white;
+                text-align: center;
+            }}
+            QProgressBar::chunk {{
+                background-color: {self.couleur_principale};
+                border-radius: 3px;
+            }}
         """)
         
         # Layout principal
@@ -127,7 +137,24 @@ class DijkstraVisualisateur(QWidget):
         title_layout.addWidget(title)
         title_layout.addStretch()
         left_panel.addLayout(title_layout)
-        left_panel.addSpacing(10)
+        
+        # Status banner
+        self.status_banner = QLabel("Prêt à démarrer")
+        self.status_banner.setAlignment(Qt.AlignCenter)
+        self.status_banner.setFont(QFont('Segoe UI', 12, QFont.Bold))
+        self.status_banner.setStyleSheet(f"""
+            background-color: {self.couleur_principale};
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+        """)
+        left_panel.addWidget(self.status_banner)
+        
+        # Progress bar
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setRange(0, 100)
+        self.progress_bar.setTextVisible(True)
+        left_panel.addWidget(self.progress_bar)
         
         # Groupe de contrôle
         control_group = QGroupBox("Contrôles")
@@ -151,13 +178,16 @@ class DijkstraVisualisateur(QWidget):
         control_layout.addLayout(speed_layout)
         
         # Boutons
+        button_layout = QHBoxLayout()
         self.step_button = QPushButton("▶ Étape suivante")
         self.step_button.clicked.connect(self.etape_suivante)
-        control_layout.addWidget(self.step_button)
+        button_layout.addWidget(self.step_button)
         
         self.auto_button = QPushButton("⏩ Défilement auto")
         self.auto_button.clicked.connect(self.basculer_auto_etape)
-        control_layout.addWidget(self.auto_button)
+        button_layout.addWidget(self.auto_button)
+        
+        control_layout.addLayout(button_layout)
         
         self.reset_button = QPushButton("↻ Réinitialiser")
         self.reset_button.clicked.connect(self.reinitialiser_algorithme)
@@ -259,7 +289,7 @@ class DijkstraVisualisateur(QWidget):
         if self.algorithme.has_next():
             self.algorithme.step_forward()
             
-            # Mettre à jour l'arbre couvrant minimal
+            # Update spanning tree
             etat = self.algorithme.get_current_state()
             noeud_courant = etat['current_node']
             predecesseur = etat['predecessors'].get(noeud_courant)
@@ -267,26 +297,83 @@ class DijkstraVisualisateur(QWidget):
             if predecesseur is not None and noeud_courant is not None:
                 if not self.arbre_couvrant_minimal.has_edge(predecesseur, noeud_courant):
                     poids = next(d['weight'] for u, v, d in self.graphe_initial.edges(data=True) 
-                               if u == predecesseur and v == noeud_courant)
+                            if u == predecesseur and v == noeud_courant)
                     self.arbre_couvrant_minimal.add_edge(predecesseur, noeud_courant, weight=poids)
+            
+            # Update progress
+            total_nodes = len(self.graphe_initial.nodes())
+            visited_nodes = len(etat['visited'])
+            progress = int((visited_nodes / total_nodes) * 100)
+            self.progress_bar.setValue(progress)
             
             self.mettre_a_jour_statut()
             self.dessiner_graphe()
             
             if not self.algorithme.has_next():
+                self.status_banner.setText("Algorithme terminé !")
+                self.status_banner.setStyleSheet("""
+                    background-color: #59a14f;
+                    color: white;
+                    padding: 8px;
+                    border-radius: 4px;
+                """)
+                self.progress_bar.setStyleSheet("""
+                    QProgressBar::chunk {
+                        background-color: #59a14f;
+                    }
+                """)
+                self.step_button.setText("Terminé")
+                self.step_button.setStyleSheet("background-color: #59a14f;")
+                self.auto_button.setText("Terminé")
+                self.auto_button.setStyleSheet("background-color: #59a14f;")
                 self.step_button.setEnabled(False)
                 self.auto_button.setEnabled(False)
-                QMessageBox.information(self, "Algorithme terminé", 
-                                      "L'algorithme de Dijkstra a terminé son exécution!")
+                self.dessiner_graphe()  # Redraw to highlight all paths
                 
     def reinitialiser_algorithme(self):
+        # Stop auto-stepping if active
         if self.auto_etape:
             self.basculer_auto_etape()
-            
+        
+        # Reset the algorithm
         self.configurer_algorithme()
+        
+        # Reset UI elements to initial state
+        self.status_banner.setText("Prêt à démarrer")
+        self.status_banner.setStyleSheet(f"""
+            background-color: {self.couleur_principale};
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+        """)
+        
+        self.progress_bar.setValue(0)
+        self.progress_bar.setStyleSheet(f"""
+            QProgressBar::chunk {{
+                background-color: {self.couleur_principale};
+            }}
+        """)
+        
+        self.step_button.setText("▶ Étape suivante")
+        self.step_button.setStyleSheet(f"""
+            background-color: {self.couleur_principale};
+            color: white;
+        """)
+        self.auto_button.setText("⏩ Défilement auto")
+        self.auto_button.setStyleSheet(f"""
+            background-color: {self.couleur_principale};
+            color: white;
+        """)
+        
+        # Enable buttons
         self.step_button.setEnabled(True)
         self.auto_button.setEnabled(True)
+        
+        # Update status displays
         self.mettre_a_jour_statut()
+        
+        # Redraw the graph
+        self.dessiner_graphe()
         
     def basculer_auto_etape(self):
         self.auto_etape = not self.auto_etape
@@ -449,8 +536,8 @@ class DijkstraVisualisateur(QWidget):
             edge_color=self.couleur_arete,
             width=1.5,
             arrows=True,
-            arrowsize=15,
-            alpha=0.5,
+            arrowsize=30,
+            alpha=1,
             connectionstyle='arc3,rad=0'  # <-- lignes droites
         )
         # Highlight current edges only if the algorithm is not finished
@@ -462,7 +549,7 @@ class DijkstraVisualisateur(QWidget):
                 edge_color=self.couleur_arete_surlignee,
                 width=3.0,
                 arrows=True,
-                arrowsize=20,
+                arrowsize=35,
                 alpha=0.8,
                 connectionstyle='arc3,rad=0'  # <-- lignes droites
             )
@@ -473,7 +560,7 @@ class DijkstraVisualisateur(QWidget):
                 edge_color=self.couleur_succes,
                 width=3.5,
                 arrows=True,
-                arrowsize=20,
+                arrowsize=35,
                 alpha=0.8,
                 connectionstyle='arc3,rad=0'  # <-- lignes droites
             )

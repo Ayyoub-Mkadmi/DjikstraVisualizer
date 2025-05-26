@@ -236,7 +236,7 @@ class GraphCanvas(QWidget):
                 return
 
             # Passed all checks - prompt for weight and add edge
-            weight, ok = QInputDialog.getInt(self, "Poids de l'arête", "Entrez le poids :", 1, 1, 999)
+            weight, ok = QInputDialog.getInt(self, "Poids de l'arête", "Entrez le poids :", 1, 0, 999)
             if ok:
                 self.edges.append((src, dst, weight))
 

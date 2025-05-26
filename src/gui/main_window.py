@@ -224,7 +224,6 @@ class MainWindow(QWidget):
 
 
     def start_dijkstra(self):
-        print("start_dijkstra called")  # Debug
         edges = self.canvas.export_graph()
         if not edges:
             QMessageBox.warning(self, "Erreur", "Le graphe est vide.")
@@ -241,65 +240,85 @@ class MainWindow(QWidget):
 
         dialog = QDialog(self)
         dialog.setWindowTitle("Démarrer l'algorithme de Dijkstra")
-        dialog.setMinimumWidth(500)
+        dialog.setMinimumWidth(550)
+        dialog.setWindowFlag(Qt.WindowStaysOnTopHint, True)
 
         layout = QVBoxLayout(dialog)
 
         title = QLabel("Structure actuelle du graphe :")
-        title.setStyleSheet("font-weight: bold; font-size: 14px;")
+        title.setStyleSheet("font-weight: bold; font-size: 16px;")
         layout.addWidget(title)
 
         text_edit = QPlainTextEdit()
         text_edit.setPlainText(formatted_text)
         text_edit.setReadOnly(True)
-        text_edit.setFont(QFont("Courier New", 10))
-        text_edit.setStyleSheet("background-color: #f8f8f8; padding: 10px; border: 1px solid #ccc;")
+        text_edit.setFont(QFont("Courier New", 11))
+        text_edit.setStyleSheet("background-color: #f8f8f8; padding: 10px; border: 1px solid #ccc; font-size: 13px;")
         layout.addWidget(text_edit)
 
+        # Source selection
         source_label = QLabel("Choisissez le sommet source :")
+        source_label.setStyleSheet("font-size: 14px; font-weight: bold; margin-top: 10px;")
         layout.addWidget(source_label)
 
         from PyQt5.QtWidgets import QComboBox
         source_combo = QComboBox()
+        source_combo.setStyleSheet("""
+            QComboBox {
+                padding: 6px;
+                font-size: 14px;
+                min-width: 150px;
+            }
+        """)
         for node in node_list:
             source_combo.addItem(str(node))
-        layout.addWidget(source_combo)
 
+        # Add combo box with spacing above and below
+        combo_layout = QHBoxLayout()
+        combo_layout.addStretch()
+        combo_layout.addWidget(source_combo)
+        combo_layout.addStretch()
+        layout.addLayout(combo_layout)
+
+        # Buttons
         button_box = QHBoxLayout()
 
+        close_button = QPushButton("❌ Fermer")
+        close_button.setStyleSheet("padding: 8px 16px; font-size: 13px;")
+        close_button.clicked.connect(dialog.close)
+
         start_button = QPushButton("🚀 Lancer Dijkstra")
-        start_button.setStyleSheet("padding: 6px 12px; font-weight: bold;")
+        start_button.setStyleSheet("padding: 8px 16px; font-size: 13px; font-weight: bold;")
+        
         def on_start():
             try:
                 source = int(source_combo.currentText())
                 print(f"Dialog result: ok=True, source={source}")  # Debug
                 self.dijkstra_app = DijkstraApp(edges, source, parent=None)
                 self.dijkstra_app.run()
-                # Bring the visualizer to the front and set always-on-top
                 if hasattr(self.dijkstra_app, "visualizer"):
                     vis = self.dijkstra_app.visualizer
                     vis.setWindowFlag(Qt.WindowStaysOnTopHint, True)
-                    vis.show()  # Needed to apply the flag
+                    vis.show()
                     vis.raise_()
                     vis.activateWindow()
                 dialog.close()
             except Exception as e:
-                print(f"Exception: {e}")  # Debug
+                print(f"Exception: {e}")
                 QMessageBox.critical(dialog, "Erreur", f"Une erreur est survenue:\n{str(e)}")
 
         start_button.clicked.connect(on_start)
 
-        close_button = QPushButton("❌ Fermer")
-        close_button.setStyleSheet("padding: 6px 12px;")
-        close_button.clicked.connect(dialog.close)
-
-        button_box.addWidget(start_button)
-        button_box.addStretch()
+        # Button positions: cancel left, launch right
         button_box.addWidget(close_button)
+        button_box.addStretch()
+        button_box.addWidget(start_button)
 
+        layout.addSpacing(10)
         layout.addLayout(button_box)
 
         dialog.exec_()
+
     def show_predefined_graphs(self):
         # Define some sample graphs
         predefined_graphs = {
