@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, 
-    QGroupBox, QFrame, QTextEdit, QSlider, QMessageBox, QInputDialog,QProgressBar
+    QGroupBox, QFrame, QTextEdit, QSlider, QMessageBox, QInputDialog,QProgressBar,QDialog,QPlainTextEdit,QApplication
 )
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
@@ -200,6 +200,12 @@ class DijkstraVisualisateur(QWidget):
         control_group.setLayout(control_layout)
         left_panel.addWidget(control_group)
         
+        # Add this with the other buttons in setup_ui()
+        self.export_button = QPushButton("💾 Exporter la structure")
+        self.export_button.clicked.connect(self.exporter_structure)
+        self.export_button.setEnabled(True)  # Can export anytime
+        control_layout.addWidget(self.export_button)
+
         # Groupe de statut
         status_group = QGroupBox("Statut de l'algorithme")
         status_layout = QVBoxLayout()
@@ -736,3 +742,98 @@ class DijkstraVisualisateur(QWidget):
             self.killTimer(self.id_auto_etape)
         plt.close('all')
         event.accept()
+
+    def exporter_structure(self):
+        """Export the shortest path tree structure using self.arbre_couvrant_minimal"""
+        if not hasattr(self, 'algorithme'):
+            QMessageBox.warning(self, "Erreur", "Aucun algorithme initialisé.")
+            return
+        
+        etat = self.algorithme.get_current_state()
+        
+        # Get edges from the minimum spanning tree
+        edges = [(u, v, d['weight']) for u, v, d in self.arbre_couvrant_minimal.edges(data=True)]
+        edges.sort()  # Sort for consistent output
+        
+        # Format as Python code
+        formatted_edges = "Arbre des plus courts chemins depuis la source:\n[\n" + \
+                        ",\n".join(f"    ({u}, {v}, {weight})" for u, v, weight in edges) + \
+                        "\n]"
+        
+        # Add distances information
+        distances = etat['distances']
+        formatted_distances = "\n\nDistances depuis la source:\n" + \
+                            "\n".join(f"  {node}: {dist if dist != float('inf') else '∞'}" 
+                                    for node, dist in sorted(distances.items()))
+        
+        complete_output = formatted_edges + formatted_distances
+        
+        # Create the export dialog
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Arbre des plus courts chemins")
+        dialog.setMinimumWidth(500)
+        dialog.setStyleSheet("""
+            QDialog {
+                background-color: #ffffff;
+            }
+        """)
+        
+        layout = QVBoxLayout(dialog)
+        
+        # Title
+        title = QLabel("Structure de l'arbre des plus courts chemins:")
+        title.setStyleSheet("""
+            QLabel {
+                font-weight: bold;
+                font-size: 14px;
+                color: #333333;
+                padding: 10px 0;
+            }
+        """)
+        layout.addWidget(title)
+        
+        # Text area with the edges
+        text_edit = QPlainTextEdit()
+        text_edit.setPlainText(complete_output)
+        text_edit.setReadOnly(True)
+        text_edit.setFont(QFont("Consolas", 10))
+        text_edit.setStyleSheet("""
+            QPlainTextEdit {
+                background-color: #f8f9fa;
+                border: 1px solid #dddfe2;
+                border-radius: 4px;
+                padding: 10px;
+                color: #24292e;
+            }
+        """)
+        layout.addWidget(text_edit)
+        
+        # Button box
+        button_box = QHBoxLayout()
+        
+        copy_button = QPushButton("📋 Copier")
+        copy_button.setStyleSheet("""
+            QPushButton {
+                padding: 6px 12px;
+                background-color: #4285f4;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #3367d6;
+            }
+        """)
+        copy_button.clicked.connect(lambda: QApplication.clipboard().setText(complete_output))
+        
+        close_button = QPushButton("❌ Fermer")
+        close_button.setStyleSheet("padding: 8px 16px; font-size: 13px;")
+        close_button.clicked.connect(dialog.close)
+        
+        button_box.addWidget(copy_button)
+        button_box.addStretch()
+        button_box.addWidget(close_button)
+        layout.addLayout(button_box)
+        
+        dialog.exec_()

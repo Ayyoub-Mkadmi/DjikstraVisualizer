@@ -450,40 +450,71 @@ class MainWindow(QWidget):
                 QMessageBox.warning(self, "Format invalide", f"Impossible d'analyser l'entrée : {str(e)}")
 
     def import_graph_data(self, edges):
-        """Import graph data and automatically position nodes"""
+        """Import graph data and automatically position nodes in concentric circles (adaptive to screen size)"""
+        import math
+        from PyQt5.QtWidgets import QMessageBox
+
         try:
             # Clear existing graph
             self.canvas.nodes = []
             self.canvas.edges = []
-            
+
             # Find all unique nodes
             nodes = set()
             for src, dst, _ in edges:
                 nodes.add(src)
                 nodes.add(dst)
             num_nodes = len(nodes)
-            
+
             if num_nodes == 0:
                 return
-                
-            # Position nodes in a circle
+
             center_x = self.canvas.width() / 2
             center_y = self.canvas.height() / 2
-            radius = min(center_x, center_y) * 0.7
-            
-            for i in range(num_nodes):
-                angle = 2 * math.pi * i / num_nodes
-                x = center_x + radius * math.cos(angle)
-                y = center_y + radius * math.sin(angle)
-                self.canvas.nodes.append((x, y))
-            
+            max_radius = min(center_x, center_y) * 0.9
+
+            # Estimate the number of rings needed
+            ring_counts = []  # how many nodes per ring
+            remaining = num_nodes
+            ring = 1
+            while remaining > 0:
+                capacity = 6 * ring  # number of nodes this ring can hold
+                use = min(remaining, capacity)
+                ring_counts.append(use)
+                remaining -= use
+                ring += 1
+
+            num_rings = len(ring_counts)
+            if num_rings == 0:
+                return
+
+            # Dynamically calculate ring gap to use full space
+            ring_gap = max_radius / num_rings
+
+            # Place nodes in rings
+            positions = []
+            node_index = 0
+            for r, count in enumerate(ring_counts):
+                radius = ring_gap * (r + 1)
+                for i in range(count):
+                    angle = 2 * math.pi * i / count
+                    x = center_x + radius * math.cos(angle)
+                    y = center_y + radius * math.sin(angle)
+                    positions.append((x, y))
+                    node_index += 1
+
+            self.canvas.nodes = positions
+
             # Add edges
             for src, dst, weight in edges:
                 if src < num_nodes and dst < num_nodes:
                     self.canvas.edges.append((src, dst, weight))
                 else:
-                    QMessageBox.warning(self, "Arc invalide", 
-                                     f"Arc ({src}, {dst}) Référence à un nœud inexistant")
+                    QMessageBox.warning(self, "Arc invalide",
+                                        f"Arc ({src}, {dst}) Référence à un nœud inexistant")
+        except Exception as e:
+            QMessageBox.critical(self, "Erreur", str(e))
+
             
             self.canvas.update()
             
