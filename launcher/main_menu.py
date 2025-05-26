@@ -4,10 +4,12 @@ from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QVBoxLay
 from PyQt5.QtGui import QPixmap, QFont
 from PyQt5.QtCore import Qt
 
-from src.gui.main_window import MainWindow
-from src.gui2.djikstra_app import DijkstraApp
+
 import networkx as nx
 import tkinter as tk
+
+from DjikstraVisualizer.src.gui.main_window import MainWindow
+from DjikstraVisualizer.src.gui2.djikstra_app import DijkstraApp
 
 def launch_main_window():
     from PyQt5.QtWidgets import QApplication
