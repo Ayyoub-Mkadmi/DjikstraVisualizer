@@ -246,6 +246,18 @@ class DijkstraVisualisateur(QWidget):
         self.queue_display.setStyleSheet(f"color: {self.couleur_secondaire};")
         status_layout.addWidget(self.queue_display)
         
+        # --- Nouvelle section : Distances finales ---
+        final_dist_group = QGroupBox("Distances finales")
+        final_dist_layout = QVBoxLayout()
+        self.final_dist_display = QTextEdit()
+        self.final_dist_display.setReadOnly(True)
+        self.final_dist_display.setFont(QFont('Consolas', 12))
+        self.final_dist_display.setStyleSheet(f"color: {self.couleur_principale};")
+        final_dist_layout.addWidget(self.final_dist_display)
+        final_dist_group.setLayout(final_dist_layout)
+        status_layout.addWidget(final_dist_group)
+        # --- Fin nouvelle section ---
+
         status_group.setLayout(status_layout)
         left_panel.addWidget(status_group)
         left_panel.addStretch()
@@ -434,6 +446,16 @@ class DijkstraVisualisateur(QWidget):
         else:
             self.queue_display.setPlainText("Vide")
             
+        # --- Nouvelle section : Affichage des distances finales ---
+        final_distances = etat['distances']
+        lines = []
+        for node in sorted(final_distances):
+            dist = final_distances[node]
+            text_dist = f"{dist:.0f}" if dist < float('inf') else "∞"
+            lines.append(f"{node} : {text_dist}")
+        self.final_dist_display.setPlainText('\n'.join(lines))
+        # --- Fin nouvelle section ---
+            
     def dessiner_graphe(self, force_new_layout=False):
         self.axes.clear()
 
@@ -492,24 +514,82 @@ class DijkstraVisualisateur(QWidget):
         self.canvas.draw()
 
     def calculate_optimal_layout(self, force_new_seed=False):
-        """Place les nœuds en cercle, façon 'steering wheel', pour une répartition parfaite."""
+        """Place les nœuds en cercle, si >25 deux cercles, si >40 trois couches pour meilleure lisibilité."""
         import math
         n = self.graphe_initial.number_of_nodes()
         nodes = list(self.graphe_initial.nodes())
-        radius = 1.0  # rayon du cercle
-        angle_offset = 0  # pour faire tourner le cercle à chaque redessin si souhaité
-
-        # Optionnel: randomiser la rotation du cercle à chaque redessin
-        if force_new_seed:
-            import random
-            angle_offset = random.uniform(0, 2 * math.pi)
-
         pos = {}
-        for i, node in enumerate(nodes):
-            angle = 2 * math.pi * i / n + angle_offset
-            x = radius * math.cos(angle)
-            y = radius * math.sin(angle)
-            pos[node] = (x, y)
+
+        if n <= 25:
+            # Un seul cercle
+            radius = 1.0
+            angle_offset = 0
+            if force_new_seed:
+                import random
+                angle_offset = random.uniform(0, 2 * math.pi)
+            for i, node in enumerate(nodes):
+                angle = 2 * math.pi * i / n + angle_offset
+                x = radius * math.cos(angle)
+                y = radius * math.sin(angle)
+                pos[node] = (x, y)
+        elif n <= 40:
+            # Deux cercles : extérieur et intérieur
+            outer_n = min(25, n)
+            inner_n = n - outer_n
+            outer_radius = 1.0
+            inner_radius = 0.55
+            angle_offset_outer = 0
+            angle_offset_inner = math.pi / outer_n if inner_n > 0 else 0
+            if force_new_seed:
+                import random
+                angle_offset_outer = random.uniform(0, 2 * math.pi)
+                angle_offset_inner = random.uniform(0, 2 * math.pi)
+            # Outer circle
+            for i in range(outer_n):
+                angle = 2 * math.pi * i / outer_n + angle_offset_outer
+                x = outer_radius * math.cos(angle)
+                y = outer_radius * math.sin(angle)
+                pos[nodes[i]] = (x, y)
+            # Inner circle (scatter)
+            for j in range(inner_n):
+                angle = 2 * math.pi * j / inner_n + angle_offset_inner
+                x = inner_radius * math.cos(angle)
+                y = inner_radius * math.sin(angle)
+                pos[nodes[outer_n + j]] = (x, y)
+        else:
+            # Trois cercles : extérieur, intermédiaire, intérieur
+            outer_n = 20
+            middle_n = 15
+            inner_n = n - outer_n - middle_n
+            outer_radius = 1.0
+            middle_radius = 0.7
+            inner_radius = 0.4
+            angle_offset_outer = 0
+            angle_offset_middle = math.pi / middle_n if middle_n > 0 else 0
+            angle_offset_inner = math.pi / inner_n if inner_n > 0 else 0
+            if force_new_seed:
+                import random
+                angle_offset_outer = random.uniform(0, 2 * math.pi)
+                angle_offset_middle = random.uniform(0, 2 * math.pi)
+                angle_offset_inner = random.uniform(0, 2 * math.pi)
+            # Outer circle
+            for i in range(outer_n):
+                angle = 2 * math.pi * i / outer_n + angle_offset_outer
+                x = outer_radius * math.cos(angle)
+                y = outer_radius * math.sin(angle)
+                pos[nodes[i]] = (x, y)
+            # Middle circle
+            for j in range(middle_n):
+                angle = 2 * math.pi * j / middle_n + angle_offset_middle
+                x = middle_radius * math.cos(angle)
+                y = middle_radius * math.sin(angle)
+                pos[nodes[outer_n + j]] = (x, y)
+            # Inner circle (scatter)
+            for k in range(inner_n):
+                angle = 2 * math.pi * k / inner_n + angle_offset_inner
+                x = inner_radius * math.cos(angle)
+                y = inner_radius * math.sin(angle)
+                pos[nodes[outer_n + middle_n + k]] = (x, y)
         self.normalize_positions(pos)
         return pos
 

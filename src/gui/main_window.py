@@ -411,10 +411,18 @@ class MainWindow(QWidget):
                 (6, 7, 2),
                 (7, 8, 1),
                 (8, 9, 7)
-            ]
+            ],
+
+            # Graphe non complet d'ordre 50 
+            "Non complet à 50 nœuds": [
+                (i, (i + 1) % 50, 1 + (i % 7)) for i in range(50)
+            ] + [
+                (i, (i + 5) % 50, 2 + (i % 5)) for i in range(0, 50, 4)
+            ] + [
+                (i, (i + 13) % 50, 3 + (i % 3)) for i in range(0, 50, 10)
+            ],
         }
 
-        
         # Show custom selection dialog
         dialog = GraphSelectionDialog(list(predefined_graphs.keys()), self)
         if dialog.exec_() == QDialog.Accepted:

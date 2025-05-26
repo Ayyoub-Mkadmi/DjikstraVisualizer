@@ -1,18 +1,12 @@
-
 import heapq
 
 class DijkstraStepByStep:
     def __init__(self, graph, source):
         self.source = source
-        # Only keep the minimum weight for each (u, v) pair
+  
         self.graph = {}
         for u in graph.nodes():
-            min_edges = {}
-            for v, d in graph[u].items():
-                weight = d['weight']
-                if v not in min_edges or weight < min_edges[v]:
-                    min_edges[v] = weight
-            self.graph[u] = [(v, w) for v, w in min_edges.items()]
+            self.graph[u] = [(v, d['weight']) for v, d in graph[u].items()]
         self.distances = {node: float('inf') for node in self.graph}
         self.distances[source] = 0
         self.predecessors = {node: None for node in self.graph}
