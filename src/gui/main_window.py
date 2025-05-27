@@ -345,13 +345,22 @@ class MainWindow(QWidget):
             ],
 
             # Fully connected small graph (dense)
-            "Complet à 4 nœuds": [
+            "Complet à 6 nœuds": [
                 (0, 1, 1),
                 (0, 2, 5),
                 (0, 3, 3),
+                (0, 4, 2),
+                (0, 5, 4),
                 (1, 2, 2),
                 (1, 3, 4),
-                (2, 3, 1)
+                (1, 4, 3),
+                (1, 5, 2),
+                (2, 3, 1),
+                (2, 4, 2),
+                (2, 5, 3),
+                (3, 4, 2),
+                (3, 5, 1),
+                (4, 5, 2)
             ],
 
             # Graph with cycles
@@ -412,7 +421,59 @@ class MainWindow(QWidget):
                 (7, 8, 1),
                 (8, 9, 7)
             ],
-
+            "Poids négatif (non supporté)": [
+    (0, 1, 2),
+    (1, 2, -5),
+    (2, 3, 1),
+    (3, 4, 2),
+    (4, 5, 3),
+    (5, 6, 1),
+    (6, 7, 2),
+    (7, 8, 1),
+    (8, 9, 2)
+],
+"Arêtes parallèles": [
+    (0, 1, 2),
+    (0, 1, 5),
+    (1, 2, 1),
+    (2, 3, 2),
+    (2, 3, 4),
+    (3, 4, 3),
+    (4, 5, 2),
+    (5, 6, 6),
+    (6, 7, 1),
+    (7, 8, 2),
+    (8, 9, 3),
+    (9, 0, 4)
+],
+"Boucles sur sommets": [
+    (0, 0, 3),
+    (1, 1, 2),
+    (2, 2, 1),
+    (3, 3, 4),
+    (4, 4, 2),
+    (5, 5, 1),
+    (0, 1, 2),
+    (1, 2, 1),
+    (2, 3, 2),
+    (3, 4, 2),
+    (4, 5, 1),
+    (5, 6, 2),
+    (6, 7, 3),
+    (7, 8, 2),
+    (8, 9, 1)
+],
+"Arêtes bidirectionnelles": [
+    (0, 1, 2), (1, 0, 5),
+    (1, 2, 1), (2, 1, 3),
+    (2, 3, 2), (3, 2, 2),
+    (3, 4, 1), (4, 3, 4),
+    (4, 5, 2), (5, 4, 2),
+    (5, 6, 3), (6, 5, 1),
+    (6, 7, 2), (7, 6, 2),
+    (7, 8, 1), (8, 7, 3),
+    (8, 9, 2), (9, 8, 2)
+],
             # Graphe non complet d'ordre 50 
             "Non complet à 50 nœuds": [
                 (i, (i + 1) % 50, 1 + (i % 7)) for i in range(50)
@@ -421,6 +482,22 @@ class MainWindow(QWidget):
             ] + [
                 (i, (i + 13) % 50, 3 + (i % 3)) for i in range(0, 50, 10)
             ],
+            # Graphe avec cycle absorbant (cycle de poids total nul ou négatif)
+"Graphe avec cycle absorbant(non fiable)": [
+    (0, 1, 2),
+    (1, 2, -3),
+    (2, 3, 1),
+    (3, 1, -2),  
+    (3, 4, 2),
+    (4, 5, 1)
+],
+
+# Graphe avec poids négatif qui pose problème à Dijkstra (chemin optimal passe par négatif)
+"Graphe négatif (non fiable)": [
+    (0, 1, 2),
+    (1, 2, -5),
+    (2, 0, 1),  # Ce cycle 0→1→2→0 a un poids total négatif (-2)
+],
         }
 
         # Show custom selection dialog

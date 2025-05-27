@@ -144,13 +144,13 @@ L’algorithme de Dijkstra permet de trouver les plus courts chemins dans un gra
         context.setMarkdown("""
 ## Contexte du projet
 
-Cette application a été développée dans le cadre du cours de **Théorie des graphes** encadré par **Madame Yosr Slama** à [Nom de votre université].
+Cette application a été développée dans le cadre du cours de **Théorie des graphes** encadré par **Madame Yosr Slama** à **Facculté de sciences de tunis**.
 
 ### Équipe de développement
-- **Ayyoub [Nom de famille]**
-- **Yassine [Nom de famille]**
-- **Hela [Nom de famille]**
-- **Linda [Nom de famille]**
+- **Ayyoub Mkadmi**
+- **Yassine Arfaoui**
+- **Hela Zouch**
+- **Linda Chrigui**
 
 ### Objectifs du projet
 - Visualiser des structures de graphes et des algorithmes
